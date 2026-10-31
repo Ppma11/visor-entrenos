@@ -83,6 +83,15 @@
       color: #ffffff;
     }
 
+    
+    button.btn-secondary {
+      background-color: var(--border);
+      color: var(--text);
+    }
+    button.btn-secondary:hover {
+      background-color: #475569;
+      color: #ffffff;
+    }
     button.btn:disabled {
       opacity: 0.6;
       cursor: not-allowed;
@@ -336,6 +345,13 @@
       <p>Sincronización Intervals.icu &rarr; Google Drive</p>
     </div>
     <div class="actions">
+      <input type="file" id="fileWellnessInput" accept=".json" style="display:none;" onchange="importarWellnessArchivo(event)">
+      <button class="btn btn-secondary" onclick="document.getElementById('fileWellnessInput').click()" title="Importar archivo JSON de Wellness">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+        </svg>
+        Importar Wellness
+      </button>
       <span id="syncStatus" class="status-badge">Listo</span>
       <button id="btnRefresh" class="btn" onclick="ejecutarRefresco()">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -366,14 +382,16 @@
         <button class="tab-btn" id="tabRawBtn" onclick="cambiarPestana('raw')">Datos en Bruto</button>
       </div>
 
+      <!-- VISTA RESUMEN -->
       <div id="viewSummary">
         <div id="summaryContent">
           <div class="empty-state">Selecciona un día en el calendario o pulsa 'Refrescar Todo'.</div>
         </div>
       </div>
 
+      <!-- VISTA JSON EN BRUTO -->
       <div id="viewRaw" style="display: none;">
-        <div class="raw-viewer" id="rawContent">// Los datos JSON de Apps Script aparecerán aquí</div>
+        <div class="raw-viewer" id="rawContent">// La respuesta JSON directa de Apps Script aparecerá aquí</div>
       </div>
     </div>
   </main>
@@ -383,9 +401,35 @@
 
     let currentDate = new Date();
     
-    // Carga persistente desde localStorage
+    // Carga inicial persistente desde localStorage
     let activitiesRegistry = JSON.parse(localStorage.getItem("intervals_activities") || "{}");
     let wellnessRegistry = JSON.parse(localStorage.getItem("intervals_wellness") || "{}");
+
+    
+    function importarWellnessArchivo(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const importedData = JSON.parse(e.target.result);
+          // Mezclar con lo existente
+          wellnessRegistry = Object.assign({}, wellnessRegistry, importedData);
+          guardarEnAlmacenamiento();
+          renderCalendar();
+          
+          const statusBadge = document.getElementById("syncStatus");
+          statusBadge.textContent = "Wellness Importado";
+          statusBadge.style.color = "var(--success)";
+          
+          alert("¡Histórico de Wellness cargado con éxito! (" + Object.keys(importedData).length + " días)");
+        } catch (err) {
+          alert("Error al leer el archivo JSON: " + err.message);
+        }
+      };
+      reader.readAsText(file);
+    }
 
     function guardarEnAlmacenamiento() {
       localStorage.setItem("intervals_activities", JSON.stringify(activitiesRegistry));
@@ -397,7 +441,7 @@
       const statusBadge = document.getElementById("syncStatus");
 
       btn.disabled = true;
-      statusBadge.textContent = "Sincronizando año...";
+      statusBadge.textContent = "Sincronizando...";
       statusBadge.style.color = "var(--primary)";
 
       try {
@@ -409,23 +453,27 @@
         const data = await response.json();
         document.getElementById("rawContent").textContent = JSON.stringify(data, null, 2);
 
-        let ultimaFecha = null;
+        let fechaTarget = null;
 
-        // Procesar todo el array de actividades devuelto
         if (data.activities && Array.isArray(data.activities)) {
           data.activities.forEach(act => {
             if (act.date) {
               activitiesRegistry[act.date] = act;
-              ultimaFecha = act.date;
+              fechaTarget = act.date;
             }
           });
+        } else {
+          const actData = data.activity || (data.status && data.status !== "success" ? data : null);
+          if (actData && actData.date) {
+            activitiesRegistry[actData.date] = actData;
+            fechaTarget = actData.date;
+          }
         }
 
-        // Procesar wellness
         const wellData = data.wellness;
         if (wellData && wellData.date) {
           wellnessRegistry[wellData.date] = wellData;
-          if (!ultimaFecha) ultimaFecha = wellData.date;
+          if (!fechaTarget) fechaTarget = wellData.date;
         }
 
         guardarEnAlmacenamiento();
@@ -434,8 +482,8 @@
         statusBadge.style.color = "var(--success)";
 
         renderCalendar();
-        if (ultimaFecha) {
-          mostrarDetalles(ultimaFecha);
+        if (fechaTarget) {
+          mostrarDetalles(fechaTarget);
         }
 
       } catch (err) {
@@ -494,7 +542,7 @@
           const act = activitiesRegistry[dateKey];
           const pill = document.createElement("div");
           pill.className = "activity-pill";
-          pill.textContent = act.name || act.type || ".FIT";
+          pill.textContent = act.name || act.fileName || ".FIT";
           cell.appendChild(pill);
         }
 
@@ -535,12 +583,11 @@
 
       if (act) {
         html += `
-          <div class="section-title">Actividad</div>
+          <div class="section-title">Actividad (.FIT)</div>
           <div class="metric-row"><span class="metric-label">Nombre</span><span class="metric-value">${act.name || "-"}</span></div>
-          <div class="metric-row"><span class="metric-label">Tipo</span><span class="metric-value">${act.type || "-"}</span></div>
-          <div class="metric-row"><span class="metric-label">Distancia</span><span class="metric-value">${act.distanceKm ? act.distanceKm + " km" : "-"}</span></div>
-          <div class="metric-row"><span class="metric-label">Tiempo</span><span class="metric-value">${act.movingTimeMin ? act.movingTimeMin + " min" : "-"}</span></div>
-          <div class="metric-row"><span class="metric-label">ID Intervals</span><span class="metric-value">${act.activityId || "-"}</span></div>
+          <div class="metric-row"><span class="metric-label">Intervals ID</span><span class="metric-value">${act.activityId || "-"}</span></div>
+          <div class="metric-row"><span class="metric-label">Archivo Drive</span><span class="metric-value">${act.fileName || "-"}</span></div>
+          <div class="metric-row"><span class="metric-label">Estado</span><span class="metric-value">${act.status || "-"}</span></div>
         `;
       }
 
