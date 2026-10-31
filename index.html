@@ -333,10 +333,10 @@
   <header>
     <div class="title-box">
       <h1>Panel de Control de Actividades</h1>
-      <p>SincronizaciÃ³n Intervals.icu â†’ Google Drive</p>
+      <p>Sincronización Intervals.icu → Google Drive</p>
     </div>
     <div class="actions">
-      <span id="syncStatus" class="status-badge">En espera</span>
+      <span id="syncStatus" class="status-badge">Listo</span>
       <button id="btnRefresh" class="btn" onclick="ejecutarRefresco()">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
@@ -350,7 +350,7 @@
     <!-- CALENDARIO -->
     <div class="card">
       <div class="calendar-header">
-        <h2 id="currentMonthYear">Mes AÃ±o</h2>
+        <h2 id="currentMonthYear">Mes Año</h2>
         <div class="calendar-nav">
           <button onclick="cambiarMes(-1)">&larr;</button>
           <button onclick="cambiarMes(1)">&rarr;</button>
@@ -369,13 +369,13 @@
       <!-- VISTA RESUMEN -->
       <div id="viewSummary">
         <div id="summaryContent">
-          <div class="empty-state">Selecciona un dÃ­a en el calendario o pulsa 'Refrescar Todo'.</div>
+          <div class="empty-state">Selecciona un día en el calendario o pulsa 'Refrescar Todo'.</div>
         </div>
       </div>
 
       <!-- VISTA JSON EN BRUTO -->
       <div id="viewRaw" style="display: none;">
-        <div class="raw-viewer" id="rawContent">// La respuesta JSON directa de Apps Script aparecerÃ¡ aquÃ­</div>
+        <div class="raw-viewer" id="rawContent">// La respuesta JSON directa de Apps Script aparecerá aquí</div>
       </div>
     </div>
   </main>
@@ -384,11 +384,16 @@
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzugckRTOm59ny8Mc1JKqUE9wAjkkp0NtBA87YslbTf73QuAaM3uwUK5_a3uV9ZyRu8/exec";
 
     let currentDate = new Date();
-    let activitiesRegistry = {};
-    let wellnessRegistry = {};
-    let latestResponse = null;
+    
+    // Carga inicial persistente desde el almacenamiento local del navegador
+    let activitiesRegistry = JSON.parse(localStorage.getItem("intervals_activities") || "{}");
+    let wellnessRegistry = JSON.parse(localStorage.getItem("intervals_wellness") || "{}");
 
-    // SincronizaciÃ³n manual hacia Apps Script
+    function guardarEnAlmacenamiento() {
+      localStorage.setItem("intervals_activities", JSON.stringify(activitiesRegistry));
+      localStorage.setItem("intervals_wellness", JSON.stringify(wellnessRegistry));
+    }
+
     async function ejecutarRefresco() {
       const btn = document.getElementById("btnRefresh");
       const statusBadge = document.getElementById("syncStatus");
@@ -404,29 +409,37 @@
         });
 
         const data = await response.json();
-        latestResponse = data;
-
-        // Mostrar JSON completo en pestaÃ±a bruta
         document.getElementById("rawContent").textContent = JSON.stringify(data, null, 2);
 
-        // Procesar actividad (soporta tanto formato nuevo combinado como el antiguo)
-        const actData = data.activity || (data.status && data.status !== "success" ? data : null);
         let fechaTarget = null;
 
-        if (actData && actData.date) {
-          activitiesRegistry[actData.date] = actData;
-          fechaTarget = actData.date;
+        // 1. Procesar actividades: soporta tanto un array completo de los últimos 30 días como un objeto individual
+        if (data.activities && Array.isArray(data.activities)) {
+          data.activities.forEach(act => {
+            if (act.date) {
+              activitiesRegistry[act.date] = act;
+              fechaTarget = act.date;
+            }
+          });
+        } else {
+          const actData = data.activity || (data.status && data.status !== "success" ? data : null);
+          if (actData && actData.date) {
+            activitiesRegistry[actData.date] = actData;
+            fechaTarget = actData.date;
+          }
         }
 
-        // Procesar wellness
+        // 2. Procesar wellness
         const wellData = data.wellness;
-        if (wellData) {
-          const wellDate = wellData.date || (actData && actData.date) || new Date().toISOString().split('T')[0];
-          wellnessRegistry[wellDate] = wellData;
-          if (!fechaTarget) fechaTarget = wellDate;
+        if (wellData && wellData.date) {
+          wellnessRegistry[wellData.date] = wellData;
+          if (!fechaTarget) fechaTarget = wellData.date;
         }
 
-        statusBadge.textContent = "Sincronizado";
+        // Guardar permanentemente en el navegador
+        guardarEnAlmacenamiento();
+
+        statusBadge.textContent = "Al día";
         statusBadge.style.color = "var(--success)";
 
         renderCalendar();
@@ -435,7 +448,7 @@
         }
 
       } catch (err) {
-        statusBadge.textContent = "Error de conexiÃ³n";
+        statusBadge.textContent = "Error de conexión";
         statusBadge.style.color = "#f87171";
         document.getElementById("rawContent").textContent = "// Error: " + err.toString();
       } finally {
@@ -443,12 +456,11 @@
       }
     }
 
-    // Render del calendario
     function renderCalendar() {
       const grid = document.getElementById("calendarGrid");
       grid.innerHTML = "";
 
-      const daysOfWeek = ["Lun", "Mar", "MiÃ©", "Jue", "Vie", "SÃ¡b", "Dom"];
+      const daysOfWeek = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
       daysOfWeek.forEach(d => {
         const dEl = document.createElement("div");
         dEl.className = "day-name";
@@ -487,7 +499,6 @@
 
         cell.innerHTML = `<span class="day-number">${day}</span>`;
 
-        // PÃ­ldora de actividad (.fit)
         if (activitiesRegistry[dateKey]) {
           const act = activitiesRegistry[dateKey];
           const pill = document.createElement("div");
@@ -496,14 +507,13 @@
           cell.appendChild(pill);
         }
 
-        // PÃ­ldora de wellness
         if (wellnessRegistry[dateKey]) {
           const w = wellnessRegistry[dateKey];
           const wPill = document.createElement("div");
           wPill.className = "wellness-pill";
           const rhrText = w.restingHR ? `HR ${w.restingHR}` : '';
           const hrvText = w.hrv ? `HRV ${w.hrv}` : '';
-          wPill.textContent = [rhrText, hrvText].filter(Boolean).join(' | ') || "Salud âœ“";
+          wPill.textContent = [rhrText, hrvText].filter(Boolean).join(' | ') || "Salud ✓";
           cell.appendChild(wPill);
         }
 
@@ -525,17 +535,16 @@
       if (!act && !well) {
         summaryBox.innerHTML = `
           <div class="metric-row"><span class="metric-label">Fecha</span><span class="metric-value">${dateKey}</span></div>
-          <div class="empty-state">No hay registros para este dÃ­a.</div>
+          <div class="empty-state">No hay registros para este día.</div>
         `;
         return;
       }
 
       let html = `<div class="metric-row"><span class="metric-label">Fecha</span><span class="metric-value">${dateKey}</span></div>`;
 
-      // SecciÃ³n de Actividad
       if (act) {
         html += `
-          <div class="section-title">ðŸš´ Actividad (.FIT)</div>
+          <div class="section-title">🚴 Actividad (.FIT)</div>
           <div class="metric-row"><span class="metric-label">Nombre</span><span class="metric-value">${act.name || "-"}</span></div>
           <div class="metric-row"><span class="metric-label">Intervals ID</span><span class="metric-value">${act.activityId || "-"}</span></div>
           <div class="metric-row"><span class="metric-label">Archivo Drive</span><span class="metric-value">${act.fileName || "-"}</span></div>
@@ -543,14 +552,13 @@
         `;
       }
 
-      // SecciÃ³n de Wellness
       if (well) {
         html += `
-          <div class="section-title">ðŸ“Š MÃ©tricas Wellness</div>
+          <div class="section-title">📊 Métricas Wellness</div>
           ${well.restingHR ? `<div class="metric-row"><span class="metric-label">FC Reposo</span><span class="metric-value">${well.restingHR} bpm</span></div>` : ''}
           ${well.hrv ? `<div class="metric-row"><span class="metric-label">HRV (rMSSD)</span><span class="metric-value">${well.hrv} ms</span></div>` : ''}
           ${well.weight ? `<div class="metric-row"><span class="metric-label">Peso</span><span class="metric-value">${well.weight} kg</span></div>` : ''}
-          ${well.sleepSecSecs || well.sleepHours ? `<div class="metric-row"><span class="metric-label">SueÃ±o</span><span class="metric-value">${well.sleepHours || (well.sleepSecSecs ? (well.sleepSecSecs/3600).toFixed(1) : '-')} h</span></div>` : ''}
+          ${well.sleepHours ? `<div class="metric-row"><span class="metric-label">Sueño</span><span class="metric-value">${well.sleepHours} h</span></div>` : ''}
           ${well.status ? `<div class="metric-row"><span class="metric-label">Estado Sync</span><span class="metric-value">${well.status}</span></div>` : ''}
         `;
       }
@@ -570,7 +578,12 @@
       document.getElementById("viewRaw").style.display = tab === "raw" ? "block" : "none";
     }
 
+    // Inicializar y pintar inmediatamente con lo que haya en memoria persistente
     renderCalendar();
+    const hoyStr = new Date().toISOString().split("T")[0];
+    if (activitiesRegistry[hoyStr] || wellnessRegistry[hoyStr]) {
+      mostrarDetalles(hoyStr);
+    }
   </script>
 </body>
 </html>
