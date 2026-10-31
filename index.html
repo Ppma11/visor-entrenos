@@ -333,7 +333,7 @@
   <header>
     <div class="title-box">
       <h1>Panel de Control de Actividades</h1>
-      <p>Sincronización Intervals.icu → Google Drive</p>
+      <p>SincronizaciÃ³n Intervals.icu â†’ Google Drive</p>
     </div>
     <div class="actions">
       <span id="syncStatus" class="status-badge">En espera</span>
@@ -350,7 +350,7 @@
     <!-- CALENDARIO -->
     <div class="card">
       <div class="calendar-header">
-        <h2 id="currentMonthYear">Mes Año</h2>
+        <h2 id="currentMonthYear">Mes AÃ±o</h2>
         <div class="calendar-nav">
           <button onclick="cambiarMes(-1)">&larr;</button>
           <button onclick="cambiarMes(1)">&rarr;</button>
@@ -369,13 +369,13 @@
       <!-- VISTA RESUMEN -->
       <div id="viewSummary">
         <div id="summaryContent">
-          <div class="empty-state">Selecciona un día en el calendario o pulsa 'Refrescar Todo'.</div>
+          <div class="empty-state">Selecciona un dÃ­a en el calendario o pulsa 'Refrescar Todo'.</div>
         </div>
       </div>
 
       <!-- VISTA JSON EN BRUTO -->
       <div id="viewRaw" style="display: none;">
-        <div class="raw-viewer" id="rawContent">// La respuesta JSON directa de Apps Script aparecerá aquí</div>
+        <div class="raw-viewer" id="rawContent">// La respuesta JSON directa de Apps Script aparecerÃ¡ aquÃ­</div>
       </div>
     </div>
   </main>
@@ -388,7 +388,7 @@
     let wellnessRegistry = {};
     let latestResponse = null;
 
-    // Sincronización manual hacia Apps Script
+    // SincronizaciÃ³n manual hacia Apps Script
     async function ejecutarRefresco() {
       const btn = document.getElementById("btnRefresh");
       const statusBadge = document.getElementById("syncStatus");
@@ -406,7 +406,7 @@
         const data = await response.json();
         latestResponse = data;
 
-        // Mostrar JSON completo en pestaña bruta
+        // Mostrar JSON completo en pestaÃ±a bruta
         document.getElementById("rawContent").textContent = JSON.stringify(data, null, 2);
 
         // Procesar actividad (soporta tanto formato nuevo combinado como el antiguo)
@@ -435,7 +435,7 @@
         }
 
       } catch (err) {
-        statusBadge.textContent = "Error de conexión";
+        statusBadge.textContent = "Error de conexiÃ³n";
         statusBadge.style.color = "#f87171";
         document.getElementById("rawContent").textContent = "// Error: " + err.toString();
       } finally {
@@ -448,7 +448,7 @@
       const grid = document.getElementById("calendarGrid");
       grid.innerHTML = "";
 
-      const daysOfWeek = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
+      const daysOfWeek = ["Lun", "Mar", "MiÃ©", "Jue", "Vie", "SÃ¡b", "Dom"];
       daysOfWeek.forEach(d => {
         const dEl = document.createElement("div");
         dEl.className = "day-name";
@@ -487,7 +487,7 @@
 
         cell.innerHTML = `<span class="day-number">${day}</span>`;
 
-        // Píldora de actividad (.fit)
+        // PÃ­ldora de actividad (.fit)
         if (activitiesRegistry[dateKey]) {
           const act = activitiesRegistry[dateKey];
           const pill = document.createElement("div");
@@ -496,14 +496,14 @@
           cell.appendChild(pill);
         }
 
-        // Píldora de wellness
+        // PÃ­ldora de wellness
         if (wellnessRegistry[dateKey]) {
           const w = wellnessRegistry[dateKey];
           const wPill = document.createElement("div");
           wPill.className = "wellness-pill";
           const rhrText = w.restingHR ? `HR ${w.restingHR}` : '';
           const hrvText = w.hrv ? `HRV ${w.hrv}` : '';
-          wPill.textContent = [rhrText, hrvText].filter(Boolean).join(' | ') || "Salud ✓";
+          wPill.textContent = [rhrText, hrvText].filter(Boolean).join(' | ') || "Salud âœ“";
           cell.appendChild(wPill);
         }
 
@@ -525,17 +525,17 @@
       if (!act && !well) {
         summaryBox.innerHTML = `
           <div class="metric-row"><span class="metric-label">Fecha</span><span class="metric-value">${dateKey}</span></div>
-          <div class="empty-state">No hay registros para este día.</div>
+          <div class="empty-state">No hay registros para este dÃ­a.</div>
         `;
         return;
       }
 
       let html = `<div class="metric-row"><span class="metric-label">Fecha</span><span class="metric-value">${dateKey}</span></div>`;
 
-      // Sección de Actividad
+      // SecciÃ³n de Actividad
       if (act) {
         html += `
-          <div class="section-title">🚴 Actividad (.FIT)</div>
+          <div class="section-title">ðŸš´ Actividad (.FIT)</div>
           <div class="metric-row"><span class="metric-label">Nombre</span><span class="metric-value">${act.name || "-"}</span></div>
           <div class="metric-row"><span class="metric-label">Intervals ID</span><span class="metric-value">${act.activityId || "-"}</span></div>
           <div class="metric-row"><span class="metric-label">Archivo Drive</span><span class="metric-value">${act.fileName || "-"}</span></div>
@@ -543,14 +543,14 @@
         `;
       }
 
-      // Sección de Wellness
+      // SecciÃ³n de Wellness
       if (well) {
         html += `
-          <div class="section-title">📊 Métricas Wellness</div>
+          <div class="section-title">ðŸ“Š MÃ©tricas Wellness</div>
           ${well.restingHR ? `<div class="metric-row"><span class="metric-label">FC Reposo</span><span class="metric-value">${well.restingHR} bpm</span></div>` : ''}
           ${well.hrv ? `<div class="metric-row"><span class="metric-label">HRV (rMSSD)</span><span class="metric-value">${well.hrv} ms</span></div>` : ''}
           ${well.weight ? `<div class="metric-row"><span class="metric-label">Peso</span><span class="metric-value">${well.weight} kg</span></div>` : ''}
-          ${well.sleepSecSecs || well.sleepHours ? `<div class="metric-row"><span class="metric-label">Sueño</span><span class="metric-value">${well.sleepHours || (well.sleepSecSecs ? (well.sleepSecSecs/3600).toFixed(1) : '-')} h</span></div>` : ''}
+          ${well.sleepSecSecs || well.sleepHours ? `<div class="metric-row"><span class="metric-label">SueÃ±o</span><span class="metric-value">${well.sleepHours || (well.sleepSecSecs ? (well.sleepSecSecs/3600).toFixed(1) : '-')} h</span></div>` : ''}
           ${well.status ? `<div class="metric-row"><span class="metric-label">Estado Sync</span><span class="metric-value">${well.status}</span></div>` : ''}
         `;
       }
