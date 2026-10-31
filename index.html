@@ -333,7 +333,7 @@
   <header>
     <div class="title-box">
       <h1>Panel de Control de Actividades</h1>
-      <p>Sincronización Intervals.icu → Google Drive</p>
+      <p>Sincronización Intervals.icu &rarr; Google Drive</p>
     </div>
     <div class="actions">
       <span id="syncStatus" class="status-badge">Listo</span>
@@ -385,7 +385,7 @@
 
     let currentDate = new Date();
     
-    // Carga inicial persistente desde el almacenamiento local del navegador
+    // Carga inicial persistente desde localStorage
     let activitiesRegistry = JSON.parse(localStorage.getItem("intervals_activities") || "{}");
     let wellnessRegistry = JSON.parse(localStorage.getItem("intervals_wellness") || "{}");
 
@@ -413,7 +413,6 @@
 
         let fechaTarget = null;
 
-        // 1. Procesar actividades: soporta tanto un array completo de los últimos 30 días como un objeto individual
         if (data.activities && Array.isArray(data.activities)) {
           data.activities.forEach(act => {
             if (act.date) {
@@ -429,14 +428,12 @@
           }
         }
 
-        // 2. Procesar wellness
         const wellData = data.wellness;
         if (wellData && wellData.date) {
           wellnessRegistry[wellData.date] = wellData;
           if (!fechaTarget) fechaTarget = wellData.date;
         }
 
-        // Guardar permanentemente en el navegador
         guardarEnAlmacenamiento();
 
         statusBadge.textContent = "Al día";
@@ -513,7 +510,7 @@
           wPill.className = "wellness-pill";
           const rhrText = w.restingHR ? `HR ${w.restingHR}` : '';
           const hrvText = w.hrv ? `HRV ${w.hrv}` : '';
-          wPill.textContent = [rhrText, hrvText].filter(Boolean).join(' | ') || "Salud ✓";
+          wPill.textContent = [rhrText, hrvText].filter(Boolean).join(' | ') || "Salud OK";
           cell.appendChild(wPill);
         }
 
@@ -544,7 +541,7 @@
 
       if (act) {
         html += `
-          <div class="section-title">🚴 Actividad (.FIT)</div>
+          <div class="section-title">Actividad (.FIT)</div>
           <div class="metric-row"><span class="metric-label">Nombre</span><span class="metric-value">${act.name || "-"}</span></div>
           <div class="metric-row"><span class="metric-label">Intervals ID</span><span class="metric-value">${act.activityId || "-"}</span></div>
           <div class="metric-row"><span class="metric-label">Archivo Drive</span><span class="metric-value">${act.fileName || "-"}</span></div>
@@ -554,7 +551,7 @@
 
       if (well) {
         html += `
-          <div class="section-title">📊 Métricas Wellness</div>
+          <div class="section-title">Métricas Wellness</div>
           ${well.restingHR ? `<div class="metric-row"><span class="metric-label">FC Reposo</span><span class="metric-value">${well.restingHR} bpm</span></div>` : ''}
           ${well.hrv ? `<div class="metric-row"><span class="metric-label">HRV (rMSSD)</span><span class="metric-value">${well.hrv} ms</span></div>` : ''}
           ${well.weight ? `<div class="metric-row"><span class="metric-label">Peso</span><span class="metric-value">${well.weight} kg</span></div>` : ''}
@@ -578,7 +575,6 @@
       document.getElementById("viewRaw").style.display = tab === "raw" ? "block" : "none";
     }
 
-    // Inicializar y pintar inmediatamente con lo que haya en memoria persistente
     renderCalendar();
     const hoyStr = new Date().toISOString().split("T")[0];
     if (activitiesRegistry[hoyStr] || wellnessRegistry[hoyStr]) {
