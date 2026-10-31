@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Visor de Actividades y Wellness</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --border: #334155;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #38bdf8;
+      --primary-hover: #0284c7;
+      --success: #34d399;
+      --accent: #f59e0b;
+      --badge-fit: #0284c7;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background-color: var(--card-bg);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .title-box h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+    }
+
+    .title-box p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .actions {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+    }
+
+    button.btn {
+      background-color: var(--primary);
+      color: #0f172a;
+      border: none;
+      padding: 0.6rem 1.2rem;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 0.875rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: background 0.2s, opacity 0.2s;
+    }
+
+    button.btn:hover {
+      background-color: var(--primary-hover);
+      color: #ffffff;
+    }
+
+    button.btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .status-badge {
+      font-size: 0.75rem;
+      padding: 0.25rem 0.6rem;
+      border-radius: 9999px;
+      background: var(--border);
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    main {
+      padding: 2rem;
+      max-width: 1300px;
+      margin: 0 auto;
+      width: 100%;
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 1.5rem;
+      flex: 1;
+    }
+
+    @media (max-width: 900px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .calendar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.25rem;
+    }
+
+    .calendar-header h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    .calendar-nav button {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.3rem 0.6rem;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .calendar-nav button:hover {
+      background: var(--border);
+    }
+
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 6px;
+      text-align: center;
+    }
+
+    .day-name {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      padding-bottom: 0.5rem;
+      text-transform: uppercase;
+    }
+
+    .day-cell {
+      border: 1px solid var(--border);
+      min-height: 85px;
+      border-radius: 6px;
+      padding: 6px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      background: rgba(15, 23, 42, 0.4);
+      cursor: pointer;
+      position: relative;
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    .day-cell:hover {
+      border-color: var(--primary);
+    }
+
+    .day-cell.empty {
+      background: transparent;
+      border-color: transparent;
+      cursor: default;
+    }
+
+    .day-cell.selected {
+      border-color: var(--primary);
+      background: rgba(56, 189, 248, 0.08);
+    }
+
+    .day-cell.today .day-number {
+      color: var(--primary);
+      font-weight: 700;
+    }
+
+    .day-number {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .activity-pill {
+      background-color: var(--badge-fit);
+      color: #fff;
+      font-size: 0.65rem;
+      padding: 2px 5px;
+      border-radius: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      width: 100%;
+      text-align: left;
+      font-weight: 500;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.5rem;
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      padding: 0.4rem 0.8rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+
+    .tab-btn.active {
+      color: var(--primary);
+      background: rgba(56, 189, 248, 0.1);
+    }
+
+    .details-box {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .raw-viewer {
+      background: #090d16;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: #38bdf8;
+      overflow-x: auto;
+      max-height: 480px;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .metric-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.6rem 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      font-size: 0.875rem;
+    }
+
+    .metric-row:last-child {
+      border-bottom: none;
+    }
+
+    .metric-label {
+      color: var(--text-muted);
+    }
+
+    .metric-value {
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .empty-state {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-style: italic;
+      min-height: 150px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="title-box">
+      <h1>Panel de Control de Actividades</h1>
+      <p>SincronizaciÃ³n Intervals.icu â†’ Google Drive</p>
+    </div>
+    <div class="actions">
+      <span id="syncStatus" class="status-badge">En espera</span>
+      <button id="btnRefresh" class="btn" onclick="ejecutarRefresco()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+        </svg>
+        Refrescar Actividades
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <!-- CALENDARIO -->
+    <div class="card">
+      <div class="calendar-header">
+        <h2 id="currentMonthYear">Mes AÃ±o</h2>
+        <div class="calendar-nav">
+          <button onclick="cambiarMes(-1)">&larr;</button>
+          <button onclick="cambiarMes(1)">&rarr;</button>
+        </div>
+      </div>
+      <div class="calendar-grid" id="calendarGrid"></div>
+    </div>
+
+    <!-- INSPECTOR DE DATOS -->
+    <div class="card details-box">
+      <div class="tabs">
+        <button class="tab-btn active" id="tabSummaryBtn" onclick="cambiarPestana('summary')">Resumen</button>
+        <button class="tab-btn" id="tabRawBtn" onclick="cambiarPestana('raw')">Datos en Bruto</button>
+      </div>
+
+      <!-- VISTA RESUMEN -->
+      <div id="viewSummary">
+        <div id="summaryContent">
+          <div class="empty-state">Selecciona un dÃ­a en el calendario o pulsa 'Refrescar'.</div>
+        </div>
+      </div>
+
+      <!-- VISTA JSON EN BRUTO -->
+      <div id="viewRaw" style="display: none;">
+        <div class="raw-viewer" id="rawContent">// La respuesta JSON directa de Apps Script aparecerÃ¡ aquÃ­</div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzugckRTOm59ny8Mc1JKqUE9wAjkkp0NtBA87YslbTf73QuAaM3uwUK5_a3uV9ZyRu8/exec";
+
+    let currentDate = new Date();
+    let activitiesRegistry = {};
+    let latestResponse = null;
+
+    // SincronizaciÃ³n manual hacia Apps Script
+    async function ejecutarRefresco() {
+      const btn = document.getElementById("btnRefresh");
+      const statusBadge = document.getElementById("syncStatus");
+
+      btn.disabled = true;
+      statusBadge.textContent = "Sincronizando...";
+      statusBadge.style.color = "var(--primary)";
+
+      try {
+        const response = await fetch(SCRIPT_URL, {
+          method: "GET",
+          redirect: "follow"
+        });
+
+        const data = await response.json();
+        latestResponse = data;
+
+        // Mostrar JSON en pestaÃ±a bruta
+        document.getElementById("rawContent").textContent = JSON.stringify(data, null, 2);
+
+        if (data.status === "created" || data.status === "exists") {
+          statusBadge.textContent = data.status === "created" ? "Nuevo archivo .fit" : "Al dÃ­a";
+          statusBadge.style.color = "var(--success)";
+
+          if (data.date) {
+            activitiesRegistry[data.date] = data;
+            renderCalendar();
+            mostrarDetalles(data.date);
+          }
+        } else {
+          statusBadge.textContent = data.status || "Respuesta recibida";
+          statusBadge.style.color = "var(--accent)";
+        }
+      } catch (err) {
+        statusBadge.textContent = "Error de conexiÃ³n";
+        statusBadge.style.color = "#f87171";
+        document.getElementById("rawContent").textContent = "// Error: " + err.toString();
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    // Render del calendario
+    function renderCalendar() {
+      const grid = document.getElementById("calendarGrid");
+      grid.innerHTML = "";
+
+      const daysOfWeek = ["Lun", "Mar", "MiÃ©", "Jue", "Vie", "SÃ¡b", "Dom"];
+      daysOfWeek.forEach(d => {
+        const dEl = document.createElement("div");
+        dEl.className = "day-name";
+        dEl.textContent = d;
+        grid.appendChild(dEl);
+      });
+
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+
+      const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+      document.getElementById("currentMonthYear").textContent = `${meses[month]} ${year}`;
+
+      const firstDay = new Date(year, month, 1).getDay();
+      const offset = (firstDay === 0 ? 6 : firstDay - 1);
+      const totalDays = new Date(year, month + 1, 0).getDate();
+
+      for (let i = 0; i < offset; i++) {
+        const emptyCell = document.createElement("div");
+        emptyCell.className = "day-cell empty";
+        grid.appendChild(emptyCell);
+      }
+
+      const today = new Date();
+
+      for (let day = 1; day <= totalDays; day++) {
+        const cell = document.createElement("div");
+        cell.className = "day-cell";
+
+        const isToday = today.getFullYear() === year && today.getMonth() === month && today.getDate() === day;
+        if (isToday) cell.classList.add("today");
+
+        const dayFormatted = String(day).padStart(2, "0");
+        const monthFormatted = String(month + 1).padStart(2, "0");
+        const dateKey = `${year}-${monthFormatted}-${dayFormatted}`;
+
+        cell.innerHTML = `<span class="day-number">${day}</span>`;
+
+        if (activitiesRegistry[dateKey]) {
+          const act = activitiesRegistry[dateKey];
+          const pill = document.createElement("div");
+          pill.className = "activity-pill";
+          pill.textContent = act.name || act.fileName || ".FIT";
+          cell.appendChild(pill);
+        }
+
+        cell.onclick = () => {
+          document.querySelectorAll(".day-cell").forEach(c => c.classList.remove("selected"));
+          cell.classList.add("selected");
+          mostrarDetalles(dateKey);
+        };
+
+        grid.appendChild(cell);
+      }
+    }
+
+    function mostrarDetalles(dateKey) {
+      const summaryBox = document.getElementById("summaryContent");
+      const act = activitiesRegistry[dateKey];
+
+      if (!act) {
+        summaryBox.innerHTML = `
+          <div class="metric-row"><span class="metric-label">Fecha</span><span class="metric-value">${dateKey}</span></div>
+          <div class="empty-state">No hay actividad grabada en este dÃ­a.</div>
+        `;
+        return;
+      }
+
+      summaryBox.innerHTML = `
+        <div class="metric-row"><span class="metric-label">Fecha</span><span class="metric-value">${act.date || dateKey}</span></div>
+        <div class="metric-row"><span class="metric-label">Actividad</span><span class="metric-value">${act.name || "-"}</span></div>
+        <div class="metric-row"><span class="metric-label">ID Intervals</span><span class="metric-value">${act.activityId || "-"}</span></div>
+        <div class="metric-row"><span class="metric-label">Archivo Drive</span><span class="metric-value">${act.fileName || "-"}</span></div>
+        <div class="metric-row"><span class="metric-label">Estado</span><span class="metric-value">${act.status || "-"}</span></div>
+      `;
+    }
+
+    function cambiarMes(dir) {
+      currentDate.setMonth(currentDate.getMonth() + dir);
+      renderCalendar();
+    }
+
+    function cambiarPestana(tab) {
+      document.getElementById("tabSummaryBtn").classList.toggle("active", tab === "summary");
+      document.getElementById("tabRawBtn").classList.toggle("active", tab === "raw");
+      document.getElementById("viewSummary").style.display = tab === "summary" ? "block" : "none";
+      document.getElementById("viewRaw").style.display = tab === "raw" ? "block" : "none";
+    }
+
+    renderCalendar();
+  </script>
+</body>
+</html>
